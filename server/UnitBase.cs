@@ -12,7 +12,7 @@ namespace Connection
             sendDataCallBack = _sendDataCallBack;
         }
 
-        public virtual MemoryStream Login()
+        public virtual void Login(Action<MemoryStream> _callBack)
         {
             throw new NotImplementedException();
         }

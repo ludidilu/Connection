@@ -35,7 +35,12 @@ namespace Connection
 
             unit.Init(SendData);
 
-            SendDataReal(Const.PackageTag.LOGIN, unit.Login());
+            unit.Login(SetUnitOver);
+        }
+
+        private void SetUnitOver(MemoryStream _ms)
+        {
+            SendDataReal(Const.PackageTag.LOGIN, _ms);
         }
 
         internal void Kick()
