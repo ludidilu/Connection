@@ -1,6 +1,6 @@
 ﻿namespace Connection
 {
-    internal static class Const
+    internal static class Constant
     {
         internal enum PackageTag: byte
         {

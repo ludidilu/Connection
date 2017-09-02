@@ -10,9 +10,9 @@ namespace Connection
 
         private ushort bodyLength;
 
-        private byte[] uidBuffer = new byte[Const.UID_LENGTH];
+        private byte[] uidBuffer = new byte[Constant.UID_LENGTH];
 
-        private byte[] headBuffer = new byte[Const.HEAD_LENGTH];
+        private byte[] headBuffer = new byte[Constant.HEAD_LENGTH];
 
         private byte[] bodyBuffer = new byte[short.MaxValue];
 
@@ -35,12 +35,9 @@ namespace Connection
 
             unit.Init(SendData);
 
-            unit.Login(SetUnitOver);
-        }
+            byte[] bytes = unit.Login();
 
-        private void SetUnitOver(MemoryStream _ms)
-        {
-            SendDataReal(Const.PackageTag.LOGIN, _ms);
+            SendDataReal(Constant.PackageTag.LOGIN, bytes);
         }
 
         internal void Kick()
@@ -55,15 +52,15 @@ namespace Connection
 
         internal int CheckLogin(int _tick)
         {
-            if (_tick - lastTick > Const.KICK_TICK_LONG)
+            if (_tick - lastTick > Constant.KICK_TICK_LONG)
             {
                 Kick();
 
                 return -1;
             }
-            else if (socket.Available >= Const.UID_LENGTH)
+            else if (socket.Available >= Constant.UID_LENGTH)
             {
-                socket.Receive(uidBuffer, Const.UID_LENGTH, SocketFlags.None);
+                socket.Receive(uidBuffer, Constant.UID_LENGTH, SocketFlags.None);
 
                 int uid = BitConverter.ToInt32(uidBuffer, 0);
 
@@ -86,7 +83,7 @@ namespace Connection
 
         internal bool Update(int _tick)
         {
-            if (_tick - lastTick > Const.KICK_TICK_LONG)
+            if (_tick - lastTick > Constant.KICK_TICK_LONG)
             {
                 Kick();
 
@@ -107,9 +104,9 @@ namespace Connection
 
         private void ReceiveHead(int _tick)
         {
-            if (socket.Available >= Const.HEAD_LENGTH)
+            if (socket.Available >= Constant.HEAD_LENGTH)
             {
-                socket.Receive(headBuffer, Const.HEAD_LENGTH, SocketFlags.None);
+                socket.Receive(headBuffer, Constant.HEAD_LENGTH, SocketFlags.None);
 
                 isReceiveHead = false;
 
@@ -137,20 +134,33 @@ namespace Connection
 
         internal void SendData(bool _isPush, MemoryStream _ms)
         {
-            Const.PackageTag tag = _isPush ? Const.PackageTag.PUSH : Const.PackageTag.REPLY;
+            Constant.PackageTag tag = _isPush ? Constant.PackageTag.PUSH : Constant.PackageTag.REPLY;
 
             SendDataReal(tag, _ms);
         }
 
-        private void SendDataReal(Const.PackageTag _packageTag, MemoryStream _ms)
+        private void SendDataReal(Constant.PackageTag _packageTag, MemoryStream _ms)
         {
-            int length = Const.HEAD_LENGTH + Const.TYPE_LENGTH + (int)_ms.Length;
+            int length = Constant.HEAD_LENGTH + Constant.TYPE_LENGTH + (int)_ms.Length;
 
-            Array.Copy(BitConverter.GetBytes((ushort)(Const.TYPE_LENGTH + _ms.Length)), bodyBuffer, Const.HEAD_LENGTH);
+            Array.Copy(BitConverter.GetBytes((ushort)(Constant.TYPE_LENGTH + _ms.Length)), bodyBuffer, Constant.HEAD_LENGTH);
 
-            bodyBuffer[Const.HEAD_LENGTH] = (byte)_packageTag;
+            bodyBuffer[Constant.HEAD_LENGTH] = (byte)_packageTag;
 
-            Array.Copy(_ms.GetBuffer(), 0, bodyBuffer, Const.HEAD_LENGTH + Const.TYPE_LENGTH, _ms.Length);
+            Array.Copy(_ms.GetBuffer(), 0, bodyBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _ms.Length);
+
+            socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+        }
+
+        private void SendDataReal(Constant.PackageTag _packageTag, byte[] _bytes)
+        {
+            int length = Constant.HEAD_LENGTH + Constant.TYPE_LENGTH + _bytes.Length;
+
+            Array.Copy(BitConverter.GetBytes((ushort)(Constant.TYPE_LENGTH + _bytes.Length)), bodyBuffer, Constant.HEAD_LENGTH);
+
+            bodyBuffer[Constant.HEAD_LENGTH] = (byte)_packageTag;
+
+            Array.Copy(_bytes, 0, bodyBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _bytes.Length);
 
             socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
         }

@@ -16,7 +16,7 @@ namespace Connection
         }
 
         private ushort bodyLength = 0;
-        private byte[] headBuffer = new byte[Const.HEAD_LENGTH];
+        private byte[] headBuffer = new byte[Constant.HEAD_LENGTH];
         private byte[] bodyBuffer = new byte[ushort.MaxValue];
 
         private object locker = new object();
@@ -70,7 +70,7 @@ namespace Connection
                 connectStatus = ConnectStatus.LOGINING;
             }
 
-            socket.BeginSend(BitConverter.GetBytes(uid), 0, Const.UID_LENGTH, SocketFlags.None, SendCallBack, null);
+            socket.BeginSend(BitConverter.GetBytes(uid), 0, Constant.UID_LENGTH, SocketFlags.None, SendCallBack, null);
         }
 
         public void Update()
@@ -105,9 +105,9 @@ namespace Connection
 
         private void ReceiveHead()
         {
-            if (socket.Available >= Const.HEAD_LENGTH)
+            if (socket.Available >= Constant.HEAD_LENGTH)
             {
-                socket.Receive(headBuffer, Const.HEAD_LENGTH, SocketFlags.None);
+                socket.Receive(headBuffer, Constant.HEAD_LENGTH, SocketFlags.None);
 
                 isReceivingHead = false;
 
@@ -129,13 +129,13 @@ namespace Connection
                 {
                     using (BinaryReader br = new BinaryReader(ms))
                     {
-                        Const.PackageTag tag = (Const.PackageTag)br.ReadByte();
+                        Constant.PackageTag tag = (Constant.PackageTag)br.ReadByte();
 
                         Action<BinaryReader> tmpCb;
 
                         lock (locker)
                         {
-                            if (connectStatus == ConnectStatus.LOGINING && tag == Const.PackageTag.LOGIN)
+                            if (connectStatus == ConnectStatus.LOGINING && tag == Constant.PackageTag.LOGIN)
                             {
                                 connectStatus = ConnectStatus.CONNECTED;
 
@@ -145,7 +145,7 @@ namespace Connection
                             }
                             else if (connectStatus == ConnectStatus.CONNECTED)
                             {
-                                if (tag == Const.PackageTag.REPLY)
+                                if (tag == Constant.PackageTag.REPLY)
                                 {
                                     if (receiveDataCallBack == null)
                                     {
@@ -158,7 +158,7 @@ namespace Connection
                                         receiveDataCallBack = null;
                                     }
                                 }
-                                else if (tag == Const.PackageTag.PUSH)
+                                else if (tag == Constant.PackageTag.PUSH)
                                 {
                                     tmpCb = pushDataCallBack;
                                 }
@@ -196,11 +196,11 @@ namespace Connection
 
             receiveDataCallBack = _receiveDataCallBack;
 
-            int length = Const.HEAD_LENGTH + (int)_ms.Length;
+            int length = Constant.HEAD_LENGTH + (int)_ms.Length;
 
-            Array.Copy(BitConverter.GetBytes((ushort)_ms.Length), bodyBuffer, Const.HEAD_LENGTH);
+            Array.Copy(BitConverter.GetBytes((ushort)_ms.Length), bodyBuffer, Constant.HEAD_LENGTH);
 
-            Array.Copy(_ms.GetBuffer(), 0, bodyBuffer, Const.HEAD_LENGTH, _ms.Length);
+            Array.Copy(_ms.GetBuffer(), 0, bodyBuffer, Constant.HEAD_LENGTH, _ms.Length);
 
             socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
         }

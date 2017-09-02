@@ -66,7 +66,7 @@
     <Compile Include="server\UnitBase.cs" />
     <Compile Include="server\Server.cs" />
     <Compile Include="server\ServerUnit.cs" />
-    <Compile Include="const\Const.cs" />
+    <Compile Include="constant\Constant.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
