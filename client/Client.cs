@@ -21,7 +21,7 @@ namespace Connection
 
         private object locker = new object();
 
-        private Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        private Socket socket;
 
         private string ip;
 
@@ -39,7 +39,7 @@ namespace Connection
 
         private ConnectStatus connectStatus = ConnectStatus.DISCONNECT;
 
-        public void Init(string _ip, int _port, int _uid, Action<BinaryReader> _pushDataCallBack, Action<BinaryReader> _connectSuccessCallBack)
+        public void Init(string _ip, int _port, int _uid, Action<BinaryReader> _pushDataCallBack)
         {
             ip = _ip;
 
@@ -48,15 +48,20 @@ namespace Connection
             uid = _uid;
 
             pushDataCallBack = _pushDataCallBack;
+        }
 
+        public void Connect(Action<BinaryReader> _connectSuccessCallBack)
+        {
             connectSuccessCallBack = _connectSuccessCallBack;
 
-            IPEndPoint ipe = new IPEndPoint(IPAddress.Parse(_ip), _port);
+            IPEndPoint ipe = new IPEndPoint(IPAddress.Parse(ip), port);
 
             lock (locker)
             {
                 connectStatus = ConnectStatus.CONNECTING;
             }
+
+            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             socket.BeginConnect(ipe, ConnectCallBack, null);
         }
@@ -208,6 +213,15 @@ namespace Connection
         private void SendCallBack(IAsyncResult _result)
         {
             socket.EndSend(_result);
+        }
+
+        public void Close()
+        {
+            connectStatus = ConnectStatus.DISCONNECT;
+
+            socket.Close();
+
+            socket = null;
         }
     }
 }
