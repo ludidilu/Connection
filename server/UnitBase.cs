@@ -12,12 +12,12 @@ namespace Connection
             sendDataCallBack = _sendDataCallBack;
         }
 
-        public virtual byte[] Login()
+        public virtual byte[] Login(long _tick)
         {
             throw new NotImplementedException();
         }
 
-        public virtual void ReceiveData(byte[] _bytes)
+        public virtual void ReceiveData(byte[] _bytes, long _tick)
         {
             throw new NotImplementedException();
         }

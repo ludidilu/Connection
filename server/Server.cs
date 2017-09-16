@@ -17,7 +17,7 @@ namespace Connection
 
         private Dictionary<int, T> logoutDic = new Dictionary<int, T>();
 
-        private int tick = 0;
+        private long tick = 0;
 
         public void Start(string _path, int _port, int _maxConnections)
         {
@@ -53,7 +53,7 @@ namespace Connection
             BeginAccept();
         }
 
-        public void Update()
+        public long Update()
         {
             lock (noLoginList)
             {
@@ -81,7 +81,7 @@ namespace Connection
 
                             oldServerUnit.Kick();
 
-                            serverUnit.SetUnit(oldServerUnit.unit);
+                            serverUnit.SetUnit(oldServerUnit.unit, tick);
 
                             loginDic[uid] = serverUnit;
                         }
@@ -91,7 +91,7 @@ namespace Connection
 
                             logoutDic.Remove(uid);
 
-                            serverUnit.SetUnit(unit);
+                            serverUnit.SetUnit(unit, tick);
 
                             loginDic.Add(uid, serverUnit);
                         }
@@ -99,7 +99,7 @@ namespace Connection
                         {
                             T unit = new T();
 
-                            serverUnit.SetUnit(unit);
+                            serverUnit.SetUnit(unit, tick);
 
                             loginDic.Add(uid, serverUnit);
                         }
@@ -136,6 +136,8 @@ namespace Connection
 
                 kickDic.Clear();
             }
+
+            return tick;
         }
     }
 }

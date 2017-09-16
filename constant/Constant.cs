@@ -15,6 +15,6 @@
 
         internal const int TYPE_LENGTH = 1;
 
-        internal const int KICK_TICK_LONG = 100000;
+        internal const long KICK_TICK_LONG = 100000;
     }
 }

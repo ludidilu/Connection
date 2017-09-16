@@ -20,22 +20,24 @@ namespace Connection
 
         private bool isReceiveHead = true;
 
-        private int lastTick;
+        private long lastTick;
 
-        internal void Init(Socket _socket, int _tick)
+        internal void Init(Socket _socket, long _tick)
         {
             socket = _socket;
 
             lastTick = _tick;
         }
 
-        internal void SetUnit(T _unit)
+        internal void SetUnit(T _unit, long _tick)
         {
             unit = _unit;
 
             unit.Init(SendData);
 
-            byte[] bytes = unit.Login();
+            lastTick = _tick;
+
+            byte[] bytes = unit.Login(lastTick);
 
             SendDataReal(Constant.PackageTag.LOGIN, bytes);
         }
@@ -50,7 +52,7 @@ namespace Connection
             socket.Close();
         }
 
-        internal int CheckLogin(int _tick)
+        internal int CheckLogin(long _tick)
         {
             if (_tick - lastTick > Constant.KICK_TICK_LONG)
             {
@@ -81,7 +83,7 @@ namespace Connection
             }
         }
 
-        internal bool Update(int _tick)
+        internal bool Update(long _tick)
         {
             if (_tick - lastTick > Constant.KICK_TICK_LONG)
             {
@@ -102,7 +104,7 @@ namespace Connection
             return false;
         }
 
-        private void ReceiveHead(int _tick)
+        private void ReceiveHead(long _tick)
         {
             if (socket.Available >= Constant.HEAD_LENGTH)
             {
@@ -116,7 +118,7 @@ namespace Connection
             }
         }
 
-        private void ReceiveBody(int _tick)
+        private void ReceiveBody(long _tick)
         {
             if (socket.Available >= bodyLength)
             {
@@ -126,7 +128,7 @@ namespace Connection
 
                 isReceiveHead = true;
 
-                unit.ReceiveData(bodyBuffer);
+                unit.ReceiveData(bodyBuffer, lastTick);
 
                 ReceiveHead(_tick);
             }
