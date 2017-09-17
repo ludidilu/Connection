@@ -12,6 +12,11 @@ namespace Connection
             sendDataCallBack = _sendDataCallBack;
         }
 
+        public virtual void Kick(bool _logout)
+        {
+            sendDataCallBack = null;
+        }
+
         public virtual byte[] Login(long _tick)
         {
             throw new NotImplementedException();
@@ -24,7 +29,10 @@ namespace Connection
 
         public void SendData(bool _isPush, MemoryStream _ms)
         {
-            sendDataCallBack(_isPush, _ms);
+            if (sendDataCallBack != null)
+            {
+                sendDataCallBack(_isPush, _ms);
+            }
         }
     }
 }

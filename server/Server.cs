@@ -79,7 +79,7 @@ namespace Connection
                         {
                             ServerUnit<T> oldServerUnit = loginDic[uid];
 
-                            oldServerUnit.Kick();
+                            oldServerUnit.Kick(false);
 
                             serverUnit.SetUnit(oldServerUnit.unit, tick);
 

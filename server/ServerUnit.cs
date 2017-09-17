@@ -42,11 +42,11 @@ namespace Connection
             SendDataReal(Constant.PackageTag.LOGIN, bytes);
         }
 
-        internal void Kick()
+        internal void Kick(bool _logout)
         {
             if (unit != null)
             {
-                unit.Init(null);
+                unit.Kick(_logout);
             }
 
             socket.Close();
@@ -56,7 +56,7 @@ namespace Connection
         {
             if (_tick - lastTick > Constant.KICK_TICK_LONG)
             {
-                Kick();
+                Kick(true);
 
                 return -1;
             }
@@ -68,7 +68,7 @@ namespace Connection
 
                 if (uid < 1)
                 {
-                    Kick();
+                    Kick(true);
 
                     return -1;
                 }
@@ -87,7 +87,7 @@ namespace Connection
         {
             if (_tick - lastTick > Constant.KICK_TICK_LONG)
             {
-                Kick();
+                Kick(true);
 
                 return true;
             }

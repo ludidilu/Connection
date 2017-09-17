@@ -86,6 +86,8 @@ namespace Connection
                 {
                     if (CheckDisconnect())
                     {
+                        Log.Write("Disconnect!");
+
                         connectStatus = ConnectStatus.DISCONNECT;
 
                         return;
