@@ -19,8 +19,12 @@ namespace Connection
 
         private long tick = 0;
 
-        public void Start(string _path, int _port, int _maxConnections)
+        internal static long idleTick { private set; get; }
+
+        public void Start(string _path, int _port, int _maxConnections, long _idleTick)
         {
+            idleTick = _idleTick;
+
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             socket.Bind(new IPEndPoint(IPAddress.Parse(_path), _port));

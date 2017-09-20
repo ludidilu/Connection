@@ -54,7 +54,7 @@ namespace Connection
 
         internal int CheckLogin(long _tick)
         {
-            if (_tick - lastTick > Constant.KICK_TICK_LONG)
+            if (_tick - lastTick > Server<T>.idleTick)
             {
                 Kick(true);
 
@@ -85,7 +85,7 @@ namespace Connection
 
         internal bool Update(long _tick)
         {
-            if (_tick - lastTick > Constant.KICK_TICK_LONG)
+            if (_tick - lastTick > Server<T>.idleTick)
             {
                 Kick(true);
 

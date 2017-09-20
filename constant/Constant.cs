@@ -14,7 +14,5 @@
         internal const int UID_LENGTH = 4;
 
         internal const int TYPE_LENGTH = 1;
-
-        internal const long KICK_TICK_LONG = 100000;
     }
 }
