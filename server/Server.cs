@@ -111,7 +111,7 @@ namespace Connection
                 }
             }
 
-            Dictionary<int, ServerUnit<T>>.Enumerator enumerator = loginDic.GetEnumerator();
+            IEnumerator<KeyValuePair<int, ServerUnit<T>>> enumerator = loginDic.GetEnumerator();
 
             while (enumerator.MoveNext())
             {
