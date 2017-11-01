@@ -212,6 +212,25 @@ namespace Connection
             socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
         }
 
+        public void Send(MemoryStream _ms)
+        {
+            lock (locker)
+            {
+                if (connectStatus != ConnectStatus.CONNECTED)
+                {
+                    throw new Exception("SendData error0!");
+                }
+            }
+
+            int length = Constant.HEAD_LENGTH + (int)_ms.Length;
+
+            Array.Copy(BitConverter.GetBytes((ushort)_ms.Length), bodyBuffer, Constant.HEAD_LENGTH);
+
+            Array.Copy(_ms.GetBuffer(), 0, bodyBuffer, Constant.HEAD_LENGTH, _ms.Length);
+
+            socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+        }
+
         private void SendCallBack(IAsyncResult _result)
         {
             socket.EndSend(_result);
