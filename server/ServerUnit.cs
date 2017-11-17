@@ -151,7 +151,14 @@ namespace Connection
 
             Array.Copy(_ms.GetBuffer(), 0, bodyBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _ms.Length);
 
-            socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+            try
+            {
+                socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+            }
+            catch (Exception e)
+            {
+
+            }
         }
 
         private void SendDataReal(Constant.PackageTag _packageTag, byte[] _bytes)
@@ -164,7 +171,14 @@ namespace Connection
 
             Array.Copy(_bytes, 0, bodyBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _bytes.Length);
 
-            socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+            try
+            {
+                socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+            }
+            catch (Exception e)
+            {
+
+            }
         }
 
         private void SendCallBack(IAsyncResult _result)
