@@ -43,7 +43,7 @@ namespace Connection
         {
             Socket clientSocket = socket.EndAccept(_result);
 
-            Console.WriteLine("One user connect");
+            Log.Write("One user connect");
 
             ServerUnit<T> serverUnit = new ServerUnit<T>();
 
@@ -75,7 +75,7 @@ namespace Connection
                     }
                     else if (uid > 0)
                     {
-                        Console.WriteLine("One user login   uid:" + uid);
+                        Log.Write("One user login   uid:" + uid);
 
                         noLoginList.RemoveAt(i);
 
