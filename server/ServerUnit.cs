@@ -14,7 +14,9 @@ namespace Connection
 
         private byte[] headBuffer = new byte[Constant.HEAD_LENGTH];
 
-        private byte[] bodyBuffer = new byte[short.MaxValue];
+        private byte[] receiveBodyBuffer = new byte[short.MaxValue];
+
+        private byte[] sendBodyBuffer = new byte[short.MaxValue];
 
         internal T unit { get; private set; }
 
@@ -124,11 +126,11 @@ namespace Connection
             {
                 lastTick = _tick;
 
-                socket.Receive(bodyBuffer, bodyLength, SocketFlags.None);
+                socket.Receive(receiveBodyBuffer, bodyLength, SocketFlags.None);
 
                 isReceiveHead = true;
 
-                unit.ReceiveData(bodyBuffer, lastTick);
+                unit.ReceiveData(receiveBodyBuffer, lastTick);
 
                 ReceiveHead(_tick);
             }
@@ -145,15 +147,15 @@ namespace Connection
         {
             int length = Constant.HEAD_LENGTH + Constant.TYPE_LENGTH + (int)_ms.Length;
 
-            Array.Copy(BitConverter.GetBytes((ushort)(Constant.TYPE_LENGTH + _ms.Length)), bodyBuffer, Constant.HEAD_LENGTH);
+            Array.Copy(BitConverter.GetBytes((ushort)(Constant.TYPE_LENGTH + _ms.Length)), sendBodyBuffer, Constant.HEAD_LENGTH);
 
-            bodyBuffer[Constant.HEAD_LENGTH] = (byte)_packageTag;
+            sendBodyBuffer[Constant.HEAD_LENGTH] = (byte)_packageTag;
 
-            Array.Copy(_ms.GetBuffer(), 0, bodyBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _ms.Length);
+            Array.Copy(_ms.GetBuffer(), 0, sendBodyBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _ms.Length);
 
             try
             {
-                socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+                socket.BeginSend(sendBodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
             }
             catch (Exception e)
             {
@@ -165,15 +167,15 @@ namespace Connection
         {
             int length = Constant.HEAD_LENGTH + Constant.TYPE_LENGTH + _bytes.Length;
 
-            Array.Copy(BitConverter.GetBytes((ushort)(Constant.TYPE_LENGTH + _bytes.Length)), bodyBuffer, Constant.HEAD_LENGTH);
+            Array.Copy(BitConverter.GetBytes((ushort)(Constant.TYPE_LENGTH + _bytes.Length)), sendBodyBuffer, Constant.HEAD_LENGTH);
 
-            bodyBuffer[Constant.HEAD_LENGTH] = (byte)_packageTag;
+            sendBodyBuffer[Constant.HEAD_LENGTH] = (byte)_packageTag;
 
-            Array.Copy(_bytes, 0, bodyBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _bytes.Length);
+            Array.Copy(_bytes, 0, sendBodyBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _bytes.Length);
 
             try
             {
-                socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+                socket.BeginSend(sendBodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
             }
             catch (Exception e)
             {
