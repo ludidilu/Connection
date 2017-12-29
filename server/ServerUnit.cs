@@ -39,7 +39,7 @@ namespace Connection
 
             lastTick = _tick;
 
-            byte[] bytes = unit.Login(lastTick);
+            byte[] bytes = unit.Login();
 
             SendDataReal(Constant.PackageTag.LOGIN, bytes);
         }
@@ -130,7 +130,7 @@ namespace Connection
 
                 isReceiveHead = true;
 
-                unit.ReceiveData(receiveBodyBuffer, lastTick);
+                unit.ReceiveData(receiveBodyBuffer);
 
                 ReceiveHead(_tick);
             }
