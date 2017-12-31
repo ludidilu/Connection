@@ -12,12 +12,14 @@ namespace Connection
             DISCONNECT,
             CONNECTING,
             LOGINING,
-            CONNECTED
+            CONNECTED,
+            CONNECT_FAIL,
         }
 
         private ushort bodyLength = 0;
         private byte[] headBuffer = new byte[Constant.HEAD_LENGTH];
         private byte[] bodyBuffer = new byte[ushort.MaxValue];
+        private byte[] sendBuffer = new byte[ushort.MaxValue];
 
         private object locker = new object();
 
@@ -31,15 +33,19 @@ namespace Connection
 
         private Action<BinaryReader> pushDataCallBack;
 
+        private Action disconnectCallBack;
+
         private Action<BinaryReader> receiveDataCallBack;
 
         private Action<BinaryReader> connectSuccessCallBack;
+
+        private Action connectFailCallBack;
 
         private bool isReceivingHead = true;
 
         private ConnectStatus connectStatus = ConnectStatus.DISCONNECT;
 
-        public void Init(string _ip, int _port, int _uid, Action<BinaryReader> _pushDataCallBack)
+        public void Init(string _ip, int _port, int _uid, Action<BinaryReader> _pushDataCallBack, Action _disconnectCallBack)
         {
             ip = _ip;
 
@@ -48,11 +54,15 @@ namespace Connection
             uid = _uid;
 
             pushDataCallBack = _pushDataCallBack;
+
+            disconnectCallBack = _disconnectCallBack;
         }
 
-        public void Connect(Action<BinaryReader> _connectSuccessCallBack)
+        public void Connect(Action<BinaryReader> _connectSuccessCallBack, Action _connectFailCallBack)
         {
             connectSuccessCallBack = _connectSuccessCallBack;
+
+            connectFailCallBack = _connectFailCallBack;
 
             IPEndPoint ipe = new IPEndPoint(IPAddress.Parse(ip), port);
 
@@ -68,7 +78,21 @@ namespace Connection
 
         private void ConnectCallBack(IAsyncResult _result)
         {
-            socket.EndConnect(_result);
+            try
+            {
+                socket.EndConnect(_result);
+            }
+            catch (Exception e)
+            {
+                Log.Write(e.StackTrace);
+
+                lock (locker)
+                {
+                    connectStatus = ConnectStatus.CONNECT_FAIL;
+                }
+
+                return;
+            }
 
             lock (locker)
             {
@@ -90,6 +114,11 @@ namespace Connection
 
                         connectStatus = ConnectStatus.DISCONNECT;
 
+                        if (disconnectCallBack != null)
+                        {
+                            disconnectCallBack();
+                        }
+
                         return;
                     }
 
@@ -100,6 +129,21 @@ namespace Connection
                     else
                     {
                         ReceiveBody();
+                    }
+                }
+                else if (connectStatus == ConnectStatus.CONNECT_FAIL)
+                {
+                    connectStatus = ConnectStatus.DISCONNECT;
+
+                    connectSuccessCallBack = null;
+
+                    if (connectFailCallBack != null)
+                    {
+                        Action tmpCb = connectFailCallBack;
+
+                        connectFailCallBack = null;
+
+                        tmpCb();
                     }
                 }
             }
@@ -149,6 +193,8 @@ namespace Connection
                                 tmpCb = connectSuccessCallBack;
 
                                 connectSuccessCallBack = null;
+
+                                connectFailCallBack = null;
                             }
                             else if (connectStatus == ConnectStatus.CONNECTED)
                             {
@@ -205,11 +251,11 @@ namespace Connection
 
             int length = Constant.HEAD_LENGTH + (int)_ms.Length;
 
-            Array.Copy(BitConverter.GetBytes((ushort)_ms.Length), bodyBuffer, Constant.HEAD_LENGTH);
+            Array.Copy(BitConverter.GetBytes((ushort)_ms.Length), sendBuffer, Constant.HEAD_LENGTH);
 
-            Array.Copy(_ms.GetBuffer(), 0, bodyBuffer, Constant.HEAD_LENGTH, _ms.Length);
+            Array.Copy(_ms.GetBuffer(), 0, sendBuffer, Constant.HEAD_LENGTH, _ms.Length);
 
-            socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+            socket.BeginSend(sendBuffer, 0, length, SocketFlags.None, SendCallBack, null);
         }
 
         public void Send(MemoryStream _ms)
@@ -224,11 +270,11 @@ namespace Connection
 
             int length = Constant.HEAD_LENGTH + (int)_ms.Length;
 
-            Array.Copy(BitConverter.GetBytes((ushort)_ms.Length), bodyBuffer, Constant.HEAD_LENGTH);
+            Array.Copy(BitConverter.GetBytes((ushort)_ms.Length), sendBuffer, Constant.HEAD_LENGTH);
 
-            Array.Copy(_ms.GetBuffer(), 0, bodyBuffer, Constant.HEAD_LENGTH, _ms.Length);
+            Array.Copy(_ms.GetBuffer(), 0, sendBuffer, Constant.HEAD_LENGTH, _ms.Length);
 
-            socket.BeginSend(bodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+            socket.BeginSend(sendBuffer, 0, length, SocketFlags.None, SendCallBack, null);
         }
 
         private void SendCallBack(IAsyncResult _result)
@@ -238,7 +284,10 @@ namespace Connection
 
         public void Close()
         {
-            connectStatus = ConnectStatus.DISCONNECT;
+            lock (locker)
+            {
+                connectStatus = ConnectStatus.DISCONNECT;
+            }
 
             socket.Close();
 
