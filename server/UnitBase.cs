@@ -29,7 +29,10 @@ namespace Connection
 
         public void SendData(bool _isPush, MemoryStream _ms)
         {
-            sendDataCallBack?.Invoke(_isPush, _ms);
+            if (sendDataCallBack != null)
+            {
+                sendDataCallBack.Invoke(_isPush, _ms);
+            }
         }
     }
 }

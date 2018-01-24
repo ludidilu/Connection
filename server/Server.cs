@@ -21,6 +21,12 @@ namespace Connection
 
         internal static long idleTick { private set; get; }
 
+        private bool isLagTest;
+
+        private int minLagTime;
+
+        private int maxLagTime;
+
         public void Start(string _path, int _port, int _maxConnections, long _idleTick)
         {
             idleTick = _idleTick;
@@ -32,6 +38,15 @@ namespace Connection
             socket.Listen(_maxConnections);
 
             BeginAccept();
+        }
+
+        public void OpenLagTest(int _minLagTime, int _maxLagTime)
+        {
+            isLagTest = true;
+
+            minLagTime = _minLagTime;
+
+            maxLagTime = _maxLagTime;
         }
 
         private void BeginAccept()
@@ -52,6 +67,11 @@ namespace Connection
                 noLoginList.Add(serverUnit);
 
                 serverUnit.Init(clientSocket, tick);
+
+                if (isLagTest)
+                {
+                    serverUnit.OpenLagTest(minLagTime, maxLagTime);
+                }
             }
 
             BeginAccept();

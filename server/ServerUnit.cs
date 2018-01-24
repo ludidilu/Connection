@@ -24,11 +24,26 @@ namespace Connection
 
         private long lastTick;
 
+        private bool isLagTest;
+
+        private LagTest lagTest;
+
         internal void Init(Socket _socket, long _tick)
         {
             socket = _socket;
 
             lastTick = _tick;
+        }
+
+        internal void OpenLagTest(int _minLagTime, int _maxLagTime)
+        {
+            isLagTest = true;
+
+            lagTest = new LagTest();
+
+            lagTest.Init(socket, SendCallBack);
+
+            lagTest.SetTime(_minLagTime, _maxLagTime);
         }
 
         internal void SetUnit(T _unit, long _tick)
@@ -153,13 +168,24 @@ namespace Connection
 
             Array.Copy(_ms.GetBuffer(), 0, sendBodyBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _ms.Length);
 
-            try
+            if (!isLagTest)
             {
-                socket.BeginSend(sendBodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
-            }
-            catch (Exception e)
-            {
+                try
+                {
+                    socket.BeginSend(sendBodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+                }
+                catch (Exception e)
+                {
 
+                }
+            }
+            else
+            {
+                byte[] copy = new byte[length];
+
+                Array.Copy(sendBodyBuffer, copy, length);
+
+                lagTest.Add(copy);
             }
         }
 
@@ -185,7 +211,14 @@ namespace Connection
 
         private void SendCallBack(IAsyncResult _result)
         {
-            socket.EndSend(_result);
+            try
+            {
+                socket.EndSend(_result);
+            }
+            catch (Exception e)
+            {
+
+            }
         }
     }
 }

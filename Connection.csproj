@@ -63,10 +63,12 @@
     <Compile Include="client\Client.cs" />
     <Compile Include="Log\Log.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="server\LagTest.cs" />
     <Compile Include="server\UnitBase.cs" />
     <Compile Include="server\Server.cs" />
     <Compile Include="server\ServerUnit.cs" />
     <Compile Include="constant\Constant.cs" />
+    <Compile Include="superService\SuperService.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
