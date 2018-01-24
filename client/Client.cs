@@ -229,6 +229,8 @@ namespace Connection
                         tmpCb(br);
                     }
                 }
+
+                ReceiveHead();
             }
         }
 
