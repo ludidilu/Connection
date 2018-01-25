@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
 using System.IO;
+using System.Collections.Generic;
 
 namespace Connection
 {
@@ -16,7 +17,7 @@ namespace Connection
 
         private byte[] receiveBodyBuffer = new byte[short.MaxValue];
 
-        private byte[] sendBodyBuffer = new byte[short.MaxValue];
+        private Queue<byte[]> sendBufferPool = new Queue<byte[]>();
 
         internal T unit { get; private set; }
 
@@ -180,57 +181,68 @@ namespace Connection
 
         private void SendDataReal(Constant.PackageTag _packageTag, MemoryStream _ms)
         {
+            byte[] sendBuffer = GetSendBuffer();
+
             int length = Constant.HEAD_LENGTH + Constant.TYPE_LENGTH + (int)_ms.Length;
 
-            Array.Copy(BitConverter.GetBytes((ushort)(Constant.TYPE_LENGTH + _ms.Length)), sendBodyBuffer, Constant.HEAD_LENGTH);
+            Array.Copy(BitConverter.GetBytes((ushort)(Constant.TYPE_LENGTH + _ms.Length)), sendBuffer, Constant.HEAD_LENGTH);
 
-            sendBodyBuffer[Constant.HEAD_LENGTH] = (byte)_packageTag;
+            sendBuffer[Constant.HEAD_LENGTH] = (byte)_packageTag;
 
-            Array.Copy(_ms.GetBuffer(), 0, sendBodyBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _ms.Length);
+            Array.Copy(_ms.GetBuffer(), 0, sendBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _ms.Length);
 
-            if (!isLagTest)
-            {
-                try
-                {
-                    socket.BeginSend(sendBodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
-                }
-                catch (Exception e)
-                {
-
-                }
-            }
-            else
-            {
-                byte[] copy = new byte[length];
-
-                Array.Copy(sendBodyBuffer, copy, length);
-
-                Action dele = delegate ()
-                {
-                    socket.BeginSend(copy, 0, length, SocketFlags.None, SendCallBack, null);
-                };
-
-                sendLagTest.Add(dele);
-            }
+            SendBuffer(sendBuffer, length);
         }
 
         private void SendDataReal(Constant.PackageTag _packageTag, byte[] _bytes)
         {
+            byte[] sendBuffer = GetSendBuffer();
+
             int length = Constant.HEAD_LENGTH + Constant.TYPE_LENGTH + _bytes.Length;
 
-            Array.Copy(BitConverter.GetBytes((ushort)(Constant.TYPE_LENGTH + _bytes.Length)), sendBodyBuffer, Constant.HEAD_LENGTH);
+            Array.Copy(BitConverter.GetBytes((ushort)(Constant.TYPE_LENGTH + _bytes.Length)), sendBuffer, Constant.HEAD_LENGTH);
 
-            sendBodyBuffer[Constant.HEAD_LENGTH] = (byte)_packageTag;
+            sendBuffer[Constant.HEAD_LENGTH] = (byte)_packageTag;
 
-            Array.Copy(_bytes, 0, sendBodyBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _bytes.Length);
+            Array.Copy(_bytes, 0, sendBuffer, Constant.HEAD_LENGTH + Constant.TYPE_LENGTH, _bytes.Length);
 
-            try
+            SendBuffer(sendBuffer, length);
+        }
+
+        private void SendBuffer(byte[] _buffer, int _length)
+        {
+            if (!isLagTest)
             {
-                socket.BeginSend(sendBodyBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+                try
+                {
+                    socket.BeginSend(_buffer, 0, _length, SocketFlags.None, SendCallBack, _buffer);
+                }
+                catch (Exception e)
+                {
+                    lock (sendBufferPool)
+                    {
+                        sendBufferPool.Enqueue(_buffer);
+                    }
+                }
             }
-            catch (Exception e)
+            else
             {
+                Action dele = delegate ()
+                {
+                    try
+                    {
+                        socket.BeginSend(_buffer, 0, _length, SocketFlags.None, SendCallBack, _buffer);
+                    }
+                    catch (Exception e)
+                    {
+                        lock (sendBufferPool)
+                        {
+                            sendBufferPool.Enqueue(_buffer);
+                        }
+                    }
+                };
 
+                sendLagTest.Add(dele);
             }
         }
 
@@ -243,6 +255,32 @@ namespace Connection
             catch (Exception e)
             {
 
+            }
+
+            byte[] sendBuffer = _result.AsyncState as byte[];
+
+            lock (sendBufferPool)
+            {
+                sendBufferPool.Enqueue(sendBuffer);
+            }
+        }
+
+        private byte[] GetSendBuffer()
+        {
+            lock (sendBufferPool)
+            {
+                byte[] sendBuffer;
+
+                if (sendBufferPool.Count > 0)
+                {
+                    sendBuffer = sendBufferPool.Dequeue();
+                }
+                else
+                {
+                    sendBuffer = new byte[short.MaxValue];
+                }
+
+                return sendBuffer;
             }
         }
     }

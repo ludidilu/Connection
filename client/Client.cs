@@ -2,6 +2,7 @@
 using System.Net;
 using System;
 using System.IO;
+using System.Collections.Generic;
 
 namespace Connection
 {
@@ -19,7 +20,8 @@ namespace Connection
         private ushort bodyLength = 0;
         private byte[] headBuffer = new byte[Constant.HEAD_LENGTH];
         private byte[] bodyBuffer = new byte[ushort.MaxValue];
-        private byte[] sendBuffer = new byte[ushort.MaxValue];
+
+        private Queue<byte[]> sendBufferPool = new Queue<byte[]>();
 
         private object locker = new object();
 
@@ -99,7 +101,11 @@ namespace Connection
                 connectStatus = ConnectStatus.LOGINING;
             }
 
-            socket.BeginSend(BitConverter.GetBytes(uid), 0, Constant.UID_LENGTH, SocketFlags.None, SendCallBack, null);
+            byte[] sendBuffer = GetSendBuffer();
+
+            Array.Copy(BitConverter.GetBytes(uid), sendBuffer, Constant.UID_LENGTH);
+
+            SendBuffer(sendBuffer, Constant.UID_LENGTH);
         }
 
         public void Update()
@@ -251,13 +257,15 @@ namespace Connection
 
             receiveDataCallBack = _receiveDataCallBack;
 
+            byte[] sendBuffer = GetSendBuffer();
+
             int length = Constant.HEAD_LENGTH + (int)_ms.Length;
 
             Array.Copy(BitConverter.GetBytes((ushort)_ms.Length), sendBuffer, Constant.HEAD_LENGTH);
 
             Array.Copy(_ms.GetBuffer(), 0, sendBuffer, Constant.HEAD_LENGTH, _ms.Length);
 
-            socket.BeginSend(sendBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+            SendBuffer(sendBuffer, length);
         }
 
         public void Send(MemoryStream _ms)
@@ -270,18 +278,68 @@ namespace Connection
                 }
             }
 
+            byte[] sendBuffer = GetSendBuffer();
+
             int length = Constant.HEAD_LENGTH + (int)_ms.Length;
 
             Array.Copy(BitConverter.GetBytes((ushort)_ms.Length), sendBuffer, Constant.HEAD_LENGTH);
 
             Array.Copy(_ms.GetBuffer(), 0, sendBuffer, Constant.HEAD_LENGTH, _ms.Length);
 
-            socket.BeginSend(sendBuffer, 0, length, SocketFlags.None, SendCallBack, null);
+            SendBuffer(sendBuffer, length);
+        }
+
+        private void SendBuffer(byte[] _buffer, int _length)
+        {
+            try
+            {
+                socket.BeginSend(_buffer, 0, _length, SocketFlags.None, SendCallBack, _buffer);
+            }
+            catch (Exception e)
+            {
+                lock (sendBufferPool)
+                {
+                    sendBufferPool.Enqueue(_buffer);
+                }
+            }
+        }
+
+        private byte[] GetSendBuffer()
+        {
+            lock (sendBufferPool)
+            {
+                byte[] sendBuffer;
+
+                if (sendBufferPool.Count > 0)
+                {
+                    sendBuffer = sendBufferPool.Dequeue();
+                }
+                else
+                {
+                    sendBuffer = new byte[ushort.MaxValue];
+                }
+
+                return sendBuffer;
+            }
         }
 
         private void SendCallBack(IAsyncResult _result)
         {
-            socket.EndSend(_result);
+            try
+            {
+                socket.EndSend(_result);
+            }
+            catch (Exception e)
+            {
+
+            }
+
+            byte[] sendBuffer = _result.AsyncState as byte[];
+
+            lock (sendBufferPool)
+            {
+                sendBufferPool.Enqueue(sendBuffer);
+            }
         }
 
         public void Close()
