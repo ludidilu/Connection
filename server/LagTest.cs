@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Net.Sockets;
 using System.Diagnostics;
 using superService;
 
@@ -16,17 +15,6 @@ namespace Connection
 
         private Random random = new Random();
 
-        private Socket socket;
-
-        private AsyncCallback callBack;
-
-        internal void Init(Socket _socket, AsyncCallback _callBack)
-        {
-            socket = _socket;
-
-            callBack = _callBack;
-        }
-
         internal void SetTime(int _minLagTime, int _maxLagTime)
         {
             minLagTime = _minLagTime;
@@ -34,7 +22,7 @@ namespace Connection
             maxLagTime = _maxLagTime;
         }
 
-        internal void Add(byte[] _bytes)
+        internal void Add(Action _action)
         {
             int lagTime = minLagTime + (int)(random.NextDouble() * (maxLagTime - minLagTime));
 
@@ -53,7 +41,7 @@ namespace Connection
 
                 try
                 {
-                    socket.BeginSend(_bytes, 0, _bytes.Length, SocketFlags.None, callBack, null);
+                    _action();
                 }
                 catch (Exception e)
                 {

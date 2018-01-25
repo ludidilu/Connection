@@ -26,7 +26,9 @@ namespace Connection
 
         private bool isLagTest;
 
-        private LagTest lagTest;
+        private LagTest sendLagTest;
+
+        private LagTest receiveLagTest;
 
         internal void Init(Socket _socket, long _tick)
         {
@@ -39,11 +41,13 @@ namespace Connection
         {
             isLagTest = true;
 
-            lagTest = new LagTest();
+            sendLagTest = new LagTest();
 
-            lagTest.Init(socket, SendCallBack);
+            receiveLagTest = new LagTest();
 
-            lagTest.SetTime(_minLagTime, _maxLagTime);
+            sendLagTest.SetTime(_minLagTime, _maxLagTime);
+
+            receiveLagTest.SetTime(_minLagTime, _maxLagTime);
         }
 
         internal void SetUnit(T _unit, long _tick)
@@ -145,7 +149,23 @@ namespace Connection
 
                 isReceiveHead = true;
 
-                unit.ReceiveData(receiveBodyBuffer);
+                if (!isLagTest)
+                {
+                    unit.ReceiveData(receiveBodyBuffer);
+                }
+                else
+                {
+                    byte[] copy = new byte[bodyLength];
+
+                    Array.Copy(receiveBodyBuffer, copy, bodyLength);
+
+                    Action dele = delegate ()
+                    {
+                        unit.ReceiveData(receiveBodyBuffer);
+                    };
+
+                    receiveLagTest.Add(dele);
+                }
 
                 ReceiveHead(_tick);
             }
@@ -185,7 +205,12 @@ namespace Connection
 
                 Array.Copy(sendBodyBuffer, copy, length);
 
-                lagTest.Add(copy);
+                Action dele = delegate ()
+                {
+                    socket.BeginSend(copy, 0, length, SocketFlags.None, SendCallBack, null);
+                };
+
+                sendLagTest.Add(dele);
             }
         }
 
