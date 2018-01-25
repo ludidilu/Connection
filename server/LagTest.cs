@@ -15,22 +15,26 @@ namespace Connection
 
         private Random random = new Random();
 
+        private Stopwatch watch = new Stopwatch();
+
         internal void SetTime(int _minLagTime, int _maxLagTime)
         {
             minLagTime = _minLagTime;
 
             maxLagTime = _maxLagTime;
+
+            watch.Start();
         }
 
         internal void Add(Action _action)
         {
             int lagTime = minLagTime + (int)(random.NextDouble() * (maxLagTime - minLagTime));
 
-            long time = Stopwatch.GetTimestamp() + lagTime;
+            long time = watch.ElapsedMilliseconds + lagTime;
 
             Action dele = delegate ()
             {
-                long nowTime = Stopwatch.GetTimestamp();
+                long nowTime = watch.ElapsedMilliseconds;
 
                 if (nowTime < time)
                 {

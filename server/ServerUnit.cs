@@ -161,7 +161,7 @@ namespace Connection
 
                     Action dele = delegate ()
                     {
-                        unit.ReceiveData(receiveBodyBuffer);
+                        unit.ReceiveData(copy);
                     };
 
                     receiveLagTest.Add(dele);
