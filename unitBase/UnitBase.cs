@@ -8,9 +8,13 @@ namespace Connection
     {
         private Action<bool, MemoryStream> sendDataCallBack;
 
-        internal void Init(Action<bool, MemoryStream> _sendDataCallBack)
+        private Action<bool, byte[]> sendDataCallBack2;
+
+        internal void Init(Action<bool, MemoryStream> _sendDataCallBack, Action<bool, byte[]> _sendDataCallBack2)
         {
             sendDataCallBack = _sendDataCallBack;
+
+            sendDataCallBack2 = _sendDataCallBack2;
         }
 
         public virtual void Init()
@@ -21,6 +25,8 @@ namespace Connection
         public virtual void Kick()
         {
             sendDataCallBack = null;
+
+            sendDataCallBack2 = null;
         }
 
         public virtual void ReceiveData(byte[] _bytes)
@@ -33,6 +39,14 @@ namespace Connection
             if (sendDataCallBack != null)
             {
                 sendDataCallBack(_isPush, _ms);
+            }
+        }
+
+        public void SendData(bool _isPush, byte[] _bytes)
+        {
+            if (sendDataCallBack2 != null)
+            {
+                sendDataCallBack2(_isPush, _bytes);
             }
         }
     }

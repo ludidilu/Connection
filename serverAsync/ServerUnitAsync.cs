@@ -41,7 +41,7 @@ namespace Connection
 
             unit = new T();
 
-            unit.Init(SendData);
+            unit.Init(SendData, SendData);
 
             unit.Init();
 
@@ -155,6 +155,13 @@ namespace Connection
             Constant.PackageTag tag = _isPush ? Constant.PackageTag.PUSH : Constant.PackageTag.REPLY;
 
             SendDataReal(tag, _ms);
+        }
+
+        internal void SendData(bool _isPush, byte[] _bytes)
+        {
+            Constant.PackageTag tag = _isPush ? Constant.PackageTag.PUSH : Constant.PackageTag.REPLY;
+
+            SendDataReal(tag, _bytes);
         }
 
         private void SendDataReal(Constant.PackageTag _packageTag, MemoryStream _ms)
