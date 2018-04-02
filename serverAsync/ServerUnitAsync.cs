@@ -139,7 +139,19 @@ namespace Connection
                         unit.ReceiveData(data);
                     };
 
-                    unit.Process(dele);
+                    if (!isLagTest)
+                    {
+                        unit.Process(dele);
+                    }
+                    else
+                    {
+                        Action dele2 = delegate ()
+                        {
+                            unit.Process(dele);
+                        };
+
+                        receiveLagTest.Add(dele2);
+                    }
 
                     ReceiveHead();
                 }
