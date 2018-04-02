@@ -65,9 +65,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="serverAsync\ServerAsync.cs" />
     <Compile Include="serverAsync\ServerUnitAsync.cs" />
-    <Compile Include="serverAsync\UnitBaseAsync.cs" />
-    <Compile Include="server\LagTest.cs" />
-    <Compile Include="server\UnitBase.cs" />
+    <Compile Include="lagTest\LagTest.cs" />
+    <Compile Include="unitBase\UnitBase.cs" />
     <Compile Include="server\Server.cs" />
     <Compile Include="server\ServerUnit.cs" />
     <Compile Include="constant\Constant.cs" />

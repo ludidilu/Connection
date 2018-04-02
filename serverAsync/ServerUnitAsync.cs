@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace Connection
 {
-    internal class ServerUnitAsync<T> where T : UnitBaseAsync, new()
+    internal class ServerUnitAsync<T> where T : UnitBase, new()
     {
         private Socket socket;
 

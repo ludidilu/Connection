@@ -4,7 +4,7 @@ using superService;
 
 namespace Connection
 {
-    public class UnitBaseAsync : SuperService
+    public class UnitBase : SuperService
     {
         private Action<bool, MemoryStream> sendDataCallBack;
 
@@ -18,7 +18,7 @@ namespace Connection
 
         }
 
-        internal void Kick()
+        public virtual void Kick()
         {
             sendDataCallBack = null;
         }

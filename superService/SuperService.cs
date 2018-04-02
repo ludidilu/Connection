@@ -7,6 +7,7 @@ namespace superService
     public class SuperService
     {
         private readonly object processLocker = new object();
+
         private readonly object callLocker = new object();
 
         private bool inProcessQueue = false;//判断是否已经召唤线程去执行process队列了  使用这个属性一定要持有processLocker的锁

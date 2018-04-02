@@ -4,7 +4,7 @@ using System.Net;
 
 namespace Connection
 {
-    public class ServerAsync<T> where T : UnitBaseAsync, new()
+    public class ServerAsync<T> where T : UnitBase, new()
     {
         private Socket socket;
 
