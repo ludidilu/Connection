@@ -1,9 +1,10 @@
 ﻿using System;
 using System.IO;
+using superService;
 
 namespace Connection
 {
-    public class UnitBase
+    public class UnitBaseAsync : SuperService
     {
         private Action<bool, MemoryStream> sendDataCallBack;
 

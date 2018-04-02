@@ -12,9 +12,9 @@ namespace Connection
         {
             DISCONNECT,
             CONNECTING,
-            LOGINING,
             CONNECTED,
             CONNECT_FAIL,
+            CONNECT_SUCCESS,
         }
 
         private ushort bodyLength = 0;
@@ -31,40 +31,32 @@ namespace Connection
 
         private int port;
 
-        private int uid;
-
         private Action<BinaryReader> pushDataCallBack;
 
         private Action disconnectCallBack;
 
         private Action<BinaryReader> receiveDataCallBack;
 
-        private Action<BinaryReader> connectSuccessCallBack;
-
-        private Action connectFailCallBack;
+        private Action<bool> connectCallBack;
 
         private bool isReceivingHead = true;
 
         private ConnectStatus connectStatus = ConnectStatus.DISCONNECT;
 
-        public void Init(string _ip, int _port, int _uid, Action<BinaryReader> _pushDataCallBack, Action _disconnectCallBack)
+        public void Init(string _ip, int _port, Action<BinaryReader> _pushDataCallBack, Action _disconnectCallBack)
         {
             ip = _ip;
 
             port = _port;
-
-            uid = _uid;
 
             pushDataCallBack = _pushDataCallBack;
 
             disconnectCallBack = _disconnectCallBack;
         }
 
-        public void Connect(Action<BinaryReader> _connectSuccessCallBack, Action _connectFailCallBack)
+        public void Connect(Action<bool> _connectCallBack)
         {
-            connectSuccessCallBack = _connectSuccessCallBack;
-
-            connectFailCallBack = _connectFailCallBack;
+            connectCallBack = _connectCallBack;
 
             IPEndPoint ipe = new IPEndPoint(IPAddress.Parse(ip), port);
 
@@ -98,21 +90,15 @@ namespace Connection
 
             lock (locker)
             {
-                connectStatus = ConnectStatus.LOGINING;
+                connectStatus = ConnectStatus.CONNECT_SUCCESS;
             }
-
-            byte[] sendBuffer = GetSendBuffer();
-
-            Array.Copy(BitConverter.GetBytes(uid), sendBuffer, Constant.UID_LENGTH);
-
-            SendBuffer(sendBuffer, Constant.UID_LENGTH);
         }
 
         public void Update()
         {
             lock (locker)
             {
-                if (connectStatus == ConnectStatus.LOGINING || connectStatus == ConnectStatus.CONNECTED)
+                if (connectStatus == ConnectStatus.CONNECTED)
                 {
                     if (CheckDisconnect())
                     {
@@ -137,19 +123,30 @@ namespace Connection
                         ReceiveBody();
                     }
                 }
+                else if (connectStatus == ConnectStatus.CONNECT_SUCCESS)
+                {
+                    connectStatus = ConnectStatus.CONNECTED;
+
+                    if (connectCallBack != null)
+                    {
+                        Action<bool> tmpCb = connectCallBack;
+
+                        connectCallBack = null;
+
+                        tmpCb(true);
+                    }
+                }
                 else if (connectStatus == ConnectStatus.CONNECT_FAIL)
                 {
                     connectStatus = ConnectStatus.DISCONNECT;
 
-                    connectSuccessCallBack = null;
-
-                    if (connectFailCallBack != null)
+                    if (connectCallBack != null)
                     {
-                        Action tmpCb = connectFailCallBack;
+                        Action<bool> tmpCb = connectCallBack;
 
-                        connectFailCallBack = null;
+                        connectCallBack = null;
 
-                        tmpCb();
+                        tmpCb(false);
                     }
                 }
             }
@@ -190,46 +187,26 @@ namespace Connection
 
                         Action<BinaryReader> tmpCb;
 
-                        lock (locker)
+                        if (tag == Constant.PackageTag.REPLY)
                         {
-                            if (connectStatus == ConnectStatus.LOGINING && tag == Constant.PackageTag.LOGIN)
+                            if (receiveDataCallBack == null)
                             {
-                                connectStatus = ConnectStatus.CONNECTED;
-
-                                tmpCb = connectSuccessCallBack;
-
-                                connectSuccessCallBack = null;
-
-                                connectFailCallBack = null;
-                            }
-                            else if (connectStatus == ConnectStatus.CONNECTED)
-                            {
-                                if (tag == Constant.PackageTag.REPLY)
-                                {
-                                    if (receiveDataCallBack == null)
-                                    {
-                                        throw new Exception("error9!");
-                                    }
-                                    else
-                                    {
-                                        tmpCb = receiveDataCallBack;
-
-                                        receiveDataCallBack = null;
-                                    }
-                                }
-                                else if (tag == Constant.PackageTag.PUSH)
-                                {
-                                    tmpCb = pushDataCallBack;
-                                }
-                                else
-                                {
-                                    throw new Exception("error!");
-                                }
+                                throw new Exception("error9!");
                             }
                             else
                             {
-                                throw new Exception("error1!");
+                                tmpCb = receiveDataCallBack;
+
+                                receiveDataCallBack = null;
                             }
+                        }
+                        else if (tag == Constant.PackageTag.PUSH)
+                        {
+                            tmpCb = pushDataCallBack;
+                        }
+                        else
+                        {
+                            throw new Exception("error!");
                         }
 
                         tmpCb(br);

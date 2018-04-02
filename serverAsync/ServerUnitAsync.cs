@@ -5,21 +5,25 @@ using System.Collections.Generic;
 
 namespace Connection
 {
-    internal class ServerUnit<T> where T : UnitBase, new()
+    internal class ServerUnitAsync<T> where T : UnitBaseAsync, new()
     {
         private Socket socket;
 
-        private ushort bodyLength;
-
         private byte[] headBuffer = new byte[Constant.HEAD_LENGTH];
 
-        private byte[] receiveBodyBuffer = new byte[short.MaxValue];
+        private byte[] bodyBuffer;
+
+        private int headLength = Constant.HEAD_LENGTH;
+
+        private int headOffset;
+
+        private int bodyLength;
+
+        private int bodyOffset;
 
         private Queue<byte[]> sendBufferPool = new Queue<byte[]>();
 
         private T unit;
-
-        private bool isReceiveHead = true;
 
         private long lastTick;
 
@@ -40,6 +44,8 @@ namespace Connection
             unit.Init(SendData);
 
             unit.Init();
+
+            ReceiveHead();
         }
 
         internal void OpenLagTest(int _minLagTime, int _maxLagTime)
@@ -55,80 +61,92 @@ namespace Connection
             receiveLagTest.SetTime(_minLagTime, _maxLagTime);
         }
 
-        private void Kick(bool _logout)
+        private void ReceiveHead()
         {
-            if (unit != null)
-            {
-                unit.Kick();
-            }
-
-            socket.Close();
+            socket.BeginReceive(headBuffer, headOffset, headLength, SocketFlags.None, ReceiveHeadEnd, null);
         }
 
-        internal bool Update(long _tick)
+        private void ReceiveHeadEnd(IAsyncResult _result)
         {
-            if (_tick - lastTick > Server<T>.idleTick)
+            try
             {
-                Kick(true);
+                int i = socket.EndReceive(_result);
 
-                return true;
-            }
-
-            if (isReceiveHead)
-            {
-                ReceiveHead(_tick);
-            }
-            else
-            {
-                ReceiveBody(_tick);
-            }
-
-            return false;
-        }
-
-        private void ReceiveHead(long _tick)
-        {
-            if (socket.Available >= Constant.HEAD_LENGTH)
-            {
-                socket.Receive(headBuffer, Constant.HEAD_LENGTH, SocketFlags.None);
-
-                isReceiveHead = false;
-
-                bodyLength = BitConverter.ToUInt16(headBuffer, 0);
-
-                ReceiveBody(_tick);
-            }
-        }
-
-        private void ReceiveBody(long _tick)
-        {
-            if (socket.Available >= bodyLength)
-            {
-                lastTick = _tick;
-
-                socket.Receive(receiveBodyBuffer, bodyLength, SocketFlags.None);
-
-                isReceiveHead = true;
-
-                if (!isLagTest)
+                if (i == 0)
                 {
-                    unit.ReceiveData(receiveBodyBuffer);
+                    Console.WriteLine("disconnect!");
+                }
+                else if (i < headLength)
+                {
+                    headOffset = headOffset + i;
+
+                    headLength = headLength - i;
+
+                    ReceiveHead();
                 }
                 else
                 {
-                    byte[] copy = new byte[bodyLength];
+                    bodyLength = BitConverter.ToUInt16(headBuffer, 0);
 
-                    Array.Copy(receiveBodyBuffer, copy, bodyLength);
+                    bodyOffset = 0;
+
+                    headLength = Constant.HEAD_LENGTH;
+
+                    headOffset = 0;
+
+                    bodyBuffer = new byte[bodyLength];
+
+                    ReceiveBody();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("disconnect!" + e.ToString());
+            }
+        }
+
+        private void ReceiveBody()
+        {
+            socket.BeginReceive(bodyBuffer, bodyOffset, bodyLength, SocketFlags.None, ReceiveBodyEnd, null);
+        }
+
+        private void ReceiveBodyEnd(IAsyncResult _result)
+        {
+            try
+            {
+                int i = socket.EndReceive(_result);
+
+                if (i == 0)
+                {
+                    Console.WriteLine("disconnect!");
+                }
+                else if (i < bodyLength)
+                {
+                    bodyOffset = bodyOffset + i;
+
+                    bodyLength = bodyLength - i;
+
+                    ReceiveBody();
+                }
+                else
+                {
+                    byte[] data = bodyBuffer;
+
+                    bodyBuffer = null;
 
                     Action dele = delegate ()
                     {
-                        unit.ReceiveData(copy);
+                        unit.ReceiveData(data);
                     };
 
-                    receiveLagTest.Add(dele);
-                }
+                    unit.Process(dele);
 
-                ReceiveHead(_tick);
+                    ReceiveHead();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("disconnect!" + e.ToString());
             }
         }
 

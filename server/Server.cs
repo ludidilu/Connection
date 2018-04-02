@@ -9,15 +9,15 @@ namespace Connection
     {
         private Socket socket;
 
-        private List<ServerUnit<T>> noLoginList = new List<ServerUnit<T>>();
-
-        private Dictionary<int, ServerUnit<T>> kickDic = new Dictionary<int, ServerUnit<T>>();
-
-        private Dictionary<int, ServerUnit<T>> loginDic = new Dictionary<int, ServerUnit<T>>();
-
-        private Dictionary<int, T> logoutDic = new Dictionary<int, T>();
-
         private long tick = 0;
+
+        private object locker = new object();
+
+        private List<Socket> clientList = new List<Socket>();
+
+        private Dictionary<ServerUnit<T>, bool> dic = new Dictionary<ServerUnit<T>, bool>();
+
+        private List<ServerUnit<T>> kickList = new List<ServerUnit<T>>();
 
         internal static long idleTick { private set; get; }
 
@@ -60,18 +60,9 @@ namespace Connection
 
             Log.Write("One user connect");
 
-            ServerUnit<T> serverUnit = new ServerUnit<T>();
-
-            lock (noLoginList)
+            lock (locker)
             {
-                noLoginList.Add(serverUnit);
-
-                serverUnit.Init(clientSocket, tick);
-
-                if (isLagTest)
-                {
-                    serverUnit.OpenLagTest(minLagTime, maxLagTime);
-                }
+                clientList.Add(clientSocket);
             }
 
             BeginAccept();
@@ -79,86 +70,58 @@ namespace Connection
 
         public long Update()
         {
-            lock (noLoginList)
+            tick++;
+
+            lock (locker)
             {
-                tick++;
-
-                for (int i = noLoginList.Count - 1; i > -1; i--)
+                if (clientList.Count > 0)
                 {
-                    ServerUnit<T> serverUnit = noLoginList[i];
-
-                    int uid = serverUnit.CheckLogin(tick);
-
-                    if (uid == -1)
+                    for (int i = 0; i < clientList.Count; i++)
                     {
-                        noLoginList.RemoveAt(i);
+                        Socket clientSocket = clientList[i];
+
+                        ServerUnit<T> unit = new ServerUnit<T>();
+
+                        if (isLagTest)
+                        {
+                            unit.OpenLagTest(minLagTime, maxLagTime);
+                        }
+
+                        unit.Init(clientSocket, tick);
+
+                        dic.Add(unit, false);
                     }
-                    else if (uid > 0)
-                    {
-                        Log.Write("One user login   uid:" + uid);
 
-                        noLoginList.RemoveAt(i);
-
-                        if (loginDic.ContainsKey(uid))
-                        {
-                            ServerUnit<T> oldServerUnit = loginDic[uid];
-
-                            oldServerUnit.Kick(false);
-
-                            serverUnit.SetUnit(oldServerUnit.unit, tick);
-
-                            loginDic[uid] = serverUnit;
-                        }
-                        else if (logoutDic.ContainsKey(uid))
-                        {
-                            T unit = logoutDic[uid];
-
-                            logoutDic.Remove(uid);
-
-                            serverUnit.SetUnit(unit, tick);
-
-                            loginDic.Add(uid, serverUnit);
-                        }
-                        else
-                        {
-                            T unit = new T();
-
-                            serverUnit.SetUnit(unit, tick);
-
-                            loginDic.Add(uid, serverUnit);
-                        }
-                    }
+                    clientList.Clear();
                 }
             }
 
-            IEnumerator<KeyValuePair<int, ServerUnit<T>>> enumerator = loginDic.GetEnumerator();
+            IEnumerator<ServerUnit<T>> enumerator = dic.Keys.GetEnumerator();
 
             while (enumerator.MoveNext())
             {
-                KeyValuePair<int, ServerUnit<T>> pair = enumerator.Current;
+                ServerUnit<T> unit = enumerator.Current;
 
-                bool kick = pair.Value.Update(tick);
+                bool kick = unit.Update(tick);
 
                 if (kick)
                 {
-                    kickDic.Add(pair.Key, pair.Value);
+                    kickList.Add(unit);
                 }
             }
 
-            if (kickDic.Count > 0)
+            if (kickList.Count > 0)
             {
-                enumerator = kickDic.GetEnumerator();
+                enumerator = kickList.GetEnumerator();
 
                 while (enumerator.MoveNext())
                 {
-                    KeyValuePair<int, ServerUnit<T>> pair = enumerator.Current;
+                    ServerUnit<T> unit = enumerator.Current;
 
-                    loginDic.Remove(pair.Key);
-
-                    logoutDic.Add(pair.Key, pair.Value.unit);
+                    dic.Remove(unit);
                 }
 
-                kickDic.Clear();
+                kickList.Clear();
             }
 
             return tick;
