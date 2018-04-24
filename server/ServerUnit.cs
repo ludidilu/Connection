@@ -29,15 +29,19 @@ namespace Connection
 
         private LagTest receiveLagTest;
 
-        internal void Init(Socket _socket, long _tick)
+        private Action<ServerUnit<T>> closeCallBack;
+
+        internal void Init(Socket _socket, Action<ServerUnit<T>> _closeCallBack, long _tick)
         {
             socket = _socket;
+
+            closeCallBack = _closeCallBack;
 
             lastTick = _tick;
 
             unit = new T();
 
-            unit.Init(SendData, SendData);
+            unit.Init(SendData, SendData, Close);
 
             unit.Init();
         }
@@ -55,35 +59,35 @@ namespace Connection
             receiveLagTest.SetTime(_minLagTime, _maxLagTime);
         }
 
-        private void Kick(bool _logout)
+        private void Close()
+        {
+            unit = null;
+
+            socket.Close();
+
+            closeCallBack(this);
+        }
+
+        internal void Update(long _tick)
         {
             if (unit != null)
             {
-                unit.Kick();
+                if (_tick - lastTick > Server<T>.idleTick)
+                {
+                    unit.Kick();
+                }
+                else
+                {
+                    if (isReceiveHead)
+                    {
+                        ReceiveHead(_tick);
+                    }
+                    else
+                    {
+                        ReceiveBody(_tick);
+                    }
+                }
             }
-
-            socket.Close();
-        }
-
-        internal bool Update(long _tick)
-        {
-            if (_tick - lastTick > Server<T>.idleTick)
-            {
-                Kick(true);
-
-                return true;
-            }
-
-            if (isReceiveHead)
-            {
-                ReceiveHead(_tick);
-            }
-            else
-            {
-                ReceiveBody(_tick);
-            }
-
-            return false;
         }
 
         private void ReceiveHead(long _tick)
@@ -134,14 +138,14 @@ namespace Connection
             }
         }
 
-        internal void SendData(bool _isPush, MemoryStream _ms)
+        private void SendData(bool _isPush, MemoryStream _ms)
         {
             Constant.PackageTag tag = _isPush ? Constant.PackageTag.PUSH : Constant.PackageTag.REPLY;
 
             SendDataReal(tag, _ms);
         }
 
-        internal void SendData(bool _isPush, byte[] _bytes)
+        private void SendData(bool _isPush, byte[] _bytes)
         {
             Constant.PackageTag tag = _isPush ? Constant.PackageTag.PUSH : Constant.PackageTag.REPLY;
 

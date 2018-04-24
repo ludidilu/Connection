@@ -87,7 +87,7 @@ namespace Connection
                             unit.OpenLagTest(minLagTime, maxLagTime);
                         }
 
-                        unit.Init(clientSocket, tick);
+                        unit.Init(clientSocket, Kick, tick);
 
                         dic.Add(unit, false);
                     }
@@ -102,12 +102,7 @@ namespace Connection
             {
                 ServerUnit<T> unit = enumerator.Current;
 
-                bool kick = unit.Update(tick);
-
-                if (kick)
-                {
-                    kickList.Add(unit);
-                }
+                unit.Update(tick);
             }
 
             if (kickList.Count > 0)
@@ -125,6 +120,11 @@ namespace Connection
             }
 
             return tick;
+        }
+
+        private void Kick(ServerUnit<T> _unit)
+        {
+            kickList.Add(_unit);
         }
     }
 }

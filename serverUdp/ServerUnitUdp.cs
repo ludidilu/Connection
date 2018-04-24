@@ -32,7 +32,7 @@ namespace Connection
 
             unit = new T();
 
-            unit.Init(SendData, SendData);
+            unit.Init(SendData, SendData, Close);
 
             unit.Init();
         }
@@ -177,6 +177,11 @@ namespace Connection
             sendLagTest.SetTime(_minLagTime, _maxLagTime);
 
             receiveLagTest.SetTime(_minLagTime, _maxLagTime);
+        }
+
+        private void Close()
+        {
+
         }
     }
 }

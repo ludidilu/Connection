@@ -10,11 +10,15 @@ namespace Connection
 
         private Action<bool, byte[]> sendDataCallBack2;
 
-        internal void Init(Action<bool, MemoryStream> _sendDataCallBack, Action<bool, byte[]> _sendDataCallBack2)
+        private Action closeCallBack;
+
+        internal void Init(Action<bool, MemoryStream> _sendDataCallBack, Action<bool, byte[]> _sendDataCallBack2, Action _closeCallBack)
         {
             sendDataCallBack = _sendDataCallBack;
 
             sendDataCallBack2 = _sendDataCallBack2;
+
+            closeCallBack = _closeCallBack;
         }
 
         public virtual void Init()
@@ -27,6 +31,13 @@ namespace Connection
             sendDataCallBack = null;
 
             sendDataCallBack2 = null;
+
+            if (closeCallBack != null)
+            {
+                closeCallBack();
+
+                closeCallBack = null;
+            }
         }
 
         public virtual void ReceiveData(byte[] _bytes)
