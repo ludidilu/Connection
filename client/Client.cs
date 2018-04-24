@@ -19,7 +19,7 @@ namespace Connection
 
         private ushort bodyLength = 0;
         private byte[] headBuffer = new byte[Constant.HEAD_LENGTH];
-        private byte[] bodyBuffer = new byte[ushort.MaxValue];
+        private byte[] bodyBuffer;
 
         private Queue<byte[]> sendBufferPool = new Queue<byte[]>();
 
@@ -167,6 +167,8 @@ namespace Connection
 
                 bodyLength = BitConverter.ToUInt16(headBuffer, 0);
 
+                bodyBuffer = new byte[bodyLength];
+
                 ReceiveBody();
             }
         }
@@ -177,9 +179,13 @@ namespace Connection
             {
                 socket.Receive(bodyBuffer, bodyLength, SocketFlags.None);
 
+                byte[] data = bodyBuffer;
+
+                bodyBuffer = null;
+
                 isReceivingHead = true;
 
-                using (MemoryStream ms = new MemoryStream(bodyBuffer))
+                using (MemoryStream ms = new MemoryStream(data))
                 {
                     using (BinaryReader br = new BinaryReader(ms))
                     {

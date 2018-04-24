@@ -13,7 +13,7 @@ namespace Connection
 
         private byte[] headBuffer = new byte[Constant.HEAD_LENGTH];
 
-        private byte[] receiveBodyBuffer = new byte[short.MaxValue];
+        private byte[] bodyBuffer;
 
         private Queue<byte[]> sendBufferPool = new Queue<byte[]>();
 
@@ -96,6 +96,8 @@ namespace Connection
 
                 bodyLength = BitConverter.ToUInt16(headBuffer, 0);
 
+                bodyBuffer = new byte[bodyLength];
+
                 ReceiveBody(_tick);
             }
         }
@@ -106,23 +108,23 @@ namespace Connection
             {
                 lastTick = _tick;
 
-                socket.Receive(receiveBodyBuffer, bodyLength, SocketFlags.None);
+                socket.Receive(bodyBuffer, bodyLength, SocketFlags.None);
 
                 isReceiveHead = true;
 
+                byte[] data = bodyBuffer;
+
+                bodyBuffer = null;
+
                 if (!isLagTest)
                 {
-                    unit.ReceiveData(receiveBodyBuffer);
+                    unit.ReceiveData(data);
                 }
                 else
                 {
-                    byte[] copy = new byte[bodyLength];
-
-                    Array.Copy(receiveBodyBuffer, copy, bodyLength);
-
                     Action dele = delegate ()
                     {
-                        unit.ReceiveData(copy);
+                        unit.ReceiveData(data);
                     };
 
                     receiveLagTest.Add(dele);
