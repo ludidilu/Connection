@@ -49,8 +49,8 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ConsoleApplicationConnection">
-      <HintPath>libs\ConsoleApplicationConnection.dll</HintPath>
+    <Reference Include="Dummy">
+      <HintPath>libs\Dummy.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
