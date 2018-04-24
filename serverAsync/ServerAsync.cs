@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
 using System.Net;
+using System.Collections.Generic;
 
 namespace Connection
 {
@@ -9,6 +10,12 @@ namespace Connection
         private Socket socket;
 
         private long tick = 0;
+
+        private object locker = new object();
+
+        private Dictionary<ServerUnitAsync<T>, bool> dic = new Dictionary<ServerUnitAsync<T>, bool>();
+
+        private List<ServerUnitAsync<T>> kickList = new List<ServerUnitAsync<T>>();
 
         internal static long idleTick { private set; get; }
 
@@ -58,7 +65,12 @@ namespace Connection
                 unit.OpenLagTest(minLagTime, maxLagTime);
             }
 
-            unit.Init(clientSocket, tick);
+            unit.Init(clientSocket, Kick);
+
+            lock (locker)
+            {
+                dic.Add(unit, false);
+            }
 
             BeginAccept();
         }
@@ -67,7 +79,39 @@ namespace Connection
         {
             tick++;
 
+            lock (locker)
+            {
+                IEnumerator<ServerUnitAsync<T>> enumerator = dic.Keys.GetEnumerator();
+
+                while (enumerator.MoveNext())
+                {
+                    enumerator.Current.Update();
+                }
+
+                if (kickList.Count > 0)
+                {
+                    enumerator = kickList.GetEnumerator();
+
+                    while (enumerator.MoveNext())
+                    {
+                        ServerUnitAsync<T> unit = enumerator.Current;
+
+                        dic.Remove(unit);
+                    }
+
+                    kickList.Clear();
+                }
+            }
+
             return tick;
+        }
+
+        private void Kick(ServerUnitAsync<T> _unit)
+        {
+            lock (locker)
+            {
+                kickList.Add(_unit);
+            }
         }
     }
 }

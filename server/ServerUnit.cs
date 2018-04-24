@@ -21,7 +21,9 @@ namespace Connection
 
         private bool isReceiveHead = true;
 
-        private long lastTick;
+        private long idleTick;
+
+        private Action<ServerUnit<T>> closeCallBack;
 
         private bool isLagTest;
 
@@ -29,15 +31,13 @@ namespace Connection
 
         private LagTest receiveLagTest;
 
-        private Action<ServerUnit<T>> closeCallBack;
-
-        internal void Init(Socket _socket, Action<ServerUnit<T>> _closeCallBack, long _tick)
+        internal void Init(Socket _socket, Action<ServerUnit<T>> _closeCallBack)
         {
             socket = _socket;
 
             closeCallBack = _closeCallBack;
 
-            lastTick = _tick;
+            idleTick = 0;
 
             unit = new T();
 
@@ -68,11 +68,13 @@ namespace Connection
             closeCallBack(this);
         }
 
-        internal void Update(long _tick)
+        internal void Update()
         {
             if (unit != null)
             {
-                if (_tick - lastTick > Server<T>.idleTick)
+                idleTick++;
+
+                if (idleTick > Server<T>.idleTick)
                 {
                     unit.Kick();
                 }
@@ -80,17 +82,17 @@ namespace Connection
                 {
                     if (isReceiveHead)
                     {
-                        ReceiveHead(_tick);
+                        ReceiveHead();
                     }
                     else
                     {
-                        ReceiveBody(_tick);
+                        ReceiveBody();
                     }
                 }
             }
         }
 
-        private void ReceiveHead(long _tick)
+        private void ReceiveHead()
         {
             if (socket.Available >= Constant.HEAD_LENGTH)
             {
@@ -102,15 +104,15 @@ namespace Connection
 
                 bodyBuffer = new byte[bodyLength];
 
-                ReceiveBody(_tick);
+                ReceiveBody();
             }
         }
 
-        private void ReceiveBody(long _tick)
+        private void ReceiveBody()
         {
             if (socket.Available >= bodyLength)
             {
-                lastTick = _tick;
+                idleTick = 0;
 
                 socket.Receive(bodyBuffer, bodyLength, SocketFlags.None);
 
@@ -134,7 +136,7 @@ namespace Connection
                     receiveLagTest.Add(dele);
                 }
 
-                ReceiveHead(_tick);
+                ReceiveHead();
             }
         }
 

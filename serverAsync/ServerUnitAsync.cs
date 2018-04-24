@@ -25,7 +25,9 @@ namespace Connection
 
         private T unit;
 
-        private long lastTick;
+        private Action<ServerUnitAsync<T>> closeCallBack;
+
+        private long idleTick;
 
         private bool isLagTest;
 
@@ -33,11 +35,13 @@ namespace Connection
 
         private LagTest receiveLagTest;
 
-        internal void Init(Socket _socket, long _tick)
+        internal void Init(Socket _socket, Action<ServerUnitAsync<T>> _closeCallBack)
         {
             socket = _socket;
 
-            lastTick = _tick;
+            closeCallBack = _closeCallBack;
+
+            idleTick = 0;
 
             unit = new T();
 
@@ -101,7 +105,7 @@ namespace Connection
             }
             catch (Exception e)
             {
-                Console.WriteLine("disconnect!" + e.ToString());
+                //Console.WriteLine("disconnect!" + e.ToString());
             }
         }
 
@@ -130,6 +134,8 @@ namespace Connection
                 }
                 else
                 {
+                    idleTick = 0;
+
                     byte[] data = bodyBuffer;
 
                     bodyBuffer = null;
@@ -283,7 +289,24 @@ namespace Connection
 
         private void Close()
         {
+            unit = null;
 
+            socket.Close();
+
+            closeCallBack(this);
+        }
+
+        internal void Update()
+        {
+            if (unit != null)
+            {
+                idleTick++;
+
+                if (idleTick > ServerAsync<T>.idleTick)
+                {
+                    unit.Kick();
+                }
+            }
         }
     }
 }
