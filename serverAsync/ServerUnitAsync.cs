@@ -47,7 +47,7 @@ namespace Connection
 
             unit.Init(SendData, SendData, Close);
 
-            unit.Init();
+            unit.Process(unit.Init);
 
             ReceiveHead();
         }
@@ -304,7 +304,7 @@ namespace Connection
 
                 if (idleTick > ServerAsync<T>.idleTick)
                 {
-                    unit.Kick();
+                    unit.Process(unit.Kick);
                 }
             }
         }

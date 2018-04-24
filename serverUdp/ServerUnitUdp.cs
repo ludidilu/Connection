@@ -34,7 +34,7 @@ namespace Connection
 
             unit.Init(SendData, SendData, Close);
 
-            unit.Init();
+            unit.Process(unit.Init);
         }
 
         internal void ReceiveData(byte[] _bytes)
